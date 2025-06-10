@@ -1,0 +1,61 @@
+from typing import Annotated, TypedDict
+from langgraph.graph import StateGraph, END, add_messages
+from langchain_groq import ChatGroq
+from langchain_core.messages import AIMessage, HumanMessage
+from dotenv import load_dotenv
+from langchain_community.tools import TavilySearchResults
+from langgraph.prebuilt import ToolNode
+import os
+
+from langgraph.checkpoint.memory import MemorySaver
+
+load_dotenv()
+memory = MemorySaver()
+
+class BasicChatBot(TypedDict):
+    messages: Annotated[list, add_messages]
+
+groq_model = os.getenv("groq_model")
+
+search_tools = TavilySearchResults(max_results = 1)
+tools = [search_tools]
+
+
+llm = ChatGroq(model = groq_model)
+llm_with_tools = llm.bind_tools(tools= tools)
+
+def chatbot(state: BasicChatBot):
+    return{
+        "messages" : llm_with_tools.invoke(state["messages"])
+    }
+
+def tools_router(state: BasicChatBot):
+    last_message = state["messages"][-1]
+    if(hasattr(last_message, "tool_calls") and len(last_message.tool_calls)> 0):
+        return "tool_node"
+    else:
+        return END
+tool_node = ToolNode(tools= tools)
+
+graph = StateGraph(BasicChatBot)
+
+graph.add_node("chatbot", chatbot)
+graph.set_entry_point("chatbot")
+graph.add_node("tool_node", tool_node)
+graph.add_conditional_edges("chatbot", tools_router)
+graph.add_edge("tool_node", "chatbot")
+
+app = graph.compile(checkpointer= memory)
+
+config = {"configurable": {"thread_id": 1}}
+
+while True:
+    user_input = input("User: ")
+
+    if(user_input in ["exit", "end"]):
+        break
+    else:
+        result = app.invoke({
+            "messages": [HumanMessage(content = user_input)]
+        }, config = config)
+    print( result)
