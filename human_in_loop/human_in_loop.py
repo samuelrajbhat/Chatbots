@@ -89,4 +89,4 @@ while True:
         result = app.invoke({
             "messages": [HumanMessage(content = user_input)]
         }, config=config)
-    print("AI: ", result)
+    print("AI: ", result["messages"][-1].content)
