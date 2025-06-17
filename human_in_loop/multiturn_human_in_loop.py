@@ -114,3 +114,13 @@ initial_state = {
     "human_feedback": [],
 }
 
+for chunk in app.stream(initial_state, config= thread_config):
+    for node_id, value in chunk.items():
+        if(node_id == "__interrupt__"):
+            while True: 
+                user_feedback = input("provide feedback or  type 'done' when finished")
+
+                # Resume the graph execution with the user's feedback
+
+                app.invoke(Command(resume=user_feedback),config = thread_config)
+                
