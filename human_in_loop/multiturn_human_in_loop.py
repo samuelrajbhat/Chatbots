@@ -18,7 +18,7 @@ groq_model = os.getenv("groq_model")
 llm = ChatGroq(model=groq_model)
 
 class StateClass(TypedDict):
-    linked_topic : str
+    linkedin_topic : str
     generated_post : Annotated[list[str], add_messages]
     human_feedback : Annotated[List[str], add_messages]
 
@@ -26,7 +26,7 @@ class StateClass(TypedDict):
 def model(state: StateClass):
     """Here, We are using thr LLM to generate a linkedIn post with human feedback incorporated"""
     print("[MODEL] Generating Content")
-    linkedin_topic = state["linked_topic"]
+    linkedin_topic = state["linkedin_topic"]
     feedback = state["human_feedback"] if "human_feedback" in state else ["No Feedback Yet"]
 
     # Define the PROMPT
@@ -94,6 +94,7 @@ graph = StateGraph(StateClass)
 
 graph.add_node("model", model)
 graph.add_node("human_node", human_node)
+graph.add_node("end_node", end_node)
 graph.set_entry_point("model")
 
 graph.add_edge("model", "human_node")
@@ -123,4 +124,7 @@ for chunk in app.stream(initial_state, config= thread_config):
                 # Resume the graph execution with the user's feedback
 
                 app.invoke(Command(resume=user_feedback),config = thread_config)
-                
+
+                # exit loop if users says done
+                if user_feedback.lower() == "done":
+                    break
