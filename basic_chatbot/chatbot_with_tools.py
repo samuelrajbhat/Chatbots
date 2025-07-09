@@ -6,8 +6,10 @@ from langgraph.graph import StateGraph, add_messages, END
 from langchain_groq import ChatGroq
 from langchain_core.messages import AIMessage, HumanMessage
 
-from langchain_community.tools.tavily_search import TavilySearchResults
+# from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_tavily import TavilySearch
 from langgraph.prebuilt import ToolNode
+from langchain_openai import ChatOpenAI
 
 
 load_dotenv()
@@ -18,10 +20,10 @@ class  BasicChatBot(TypedDict):
 
 groq_model = os.getenv("groq_model")
 
-search_tool = TavilySearchResults(max_results = 2)
+search_tool = TavilySearch(max_results = 2, topic="general")
 tools = [search_tool]
 
-llm = ChatGroq(model= groq_model)
+llm = ChatOpenAI(model= "gpt-4o")
 llm_with_tools = llm.bind_tools(tools = tools)
 
 def chatbot(state: BasicChatBot):
